@@ -370,7 +370,7 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const processed = processCSVContent(SAMPLE_CSV_CONTENT);
-      updatePerformanceData(processed, "hotel_sales_ledger_trnx_v2.csv");
+      updatePerformanceData(processed, "sales_sample_data3.csv");
     } catch (err: any) {
       setError("Failed to load sample data.");
       setLoading(false);
