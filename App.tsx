@@ -1,17 +1,14 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  LayoutDashboard, 
   TrendingUp, 
   Settings, 
   Users, 
-  DollarSign, 
   Lightbulb, 
-  ChevronRight, 
   Target, 
   BarChart3, 
   RefreshCw, 
   AlertCircle, 
-  FileDown, 
   Heart, 
   Database, 
   CheckCircle2, 
@@ -19,17 +16,16 @@ import {
   Info, 
   X, 
   FileSpreadsheet,
-  TrendingDown,
   CloudUpload,
   Loader2,
   Globe,
   MapPin,
-  Wallet,
-  Zap,
   Search,
   Calculator,
-  FileText,
-  Download
+  Download,
+  // Added Zap and Wallet to fix import errors
+  Zap,
+  Wallet
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { generateStrategicPlan } from './services/geminiService';
@@ -314,7 +310,7 @@ const App: React.FC = () => {
               </span>
             </div>
             
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-4">
               <button 
                 onClick={() => setIsBotOpen(true)}
                 className="flex items-center gap-2 text-indigo-800 font-bold text-sm bg-slate-100 hover:bg-slate-200 px-3.5 py-1.5 rounded-full transition-all border border-indigo-200 shadow-sm"
@@ -791,7 +787,13 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <AnalyticalBot isOpen={isBotOpen} onClose={() => setIsBotOpen(false)} hotelContext={currentStats} />
+      {/* Passing hasData prop to Bot */}
+      <AnalyticalBot 
+        isOpen={isBotOpen} 
+        onClose={() => setIsBotOpen(false)} 
+        hotelContext={currentStats} 
+        hasData={!performanceData.isDefault}
+      />
     </div>
   );
 };

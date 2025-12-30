@@ -24,18 +24,33 @@ interface AnalyticalBotProps {
   isOpen: boolean;
   onClose: () => void;
   hotelContext: string;
+  hasData: boolean; // New prop to track if data is uploaded
 }
 
-export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, hotelContext }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    { 
-      role: 'bot', 
-      text: "Hello! I am your AI Business Strategist. I have analyzed your property's current data and I'm ready to perform what-if analyses, competitor benchmarks, or market trend evaluations. What's on your mind today?" 
-    }
-  ]);
+export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, hotelContext, hasData }) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialize or reset greeting based on data presence
+  useEffect(() => {
+    if (hasData) {
+      setMessages([
+        { 
+          role: 'bot', 
+          text: "Hello! I am your AI Business Strategist. I have analyzed your property's current data and I'm ready to perform what-if analyses, competitor benchmarks, or market trend evaluations. What's on your mind today?" 
+        }
+      ]);
+    } else {
+      setMessages([
+        { 
+          role: 'bot', 
+          text: "Welcome to ProfitPath AI. Iam your Assistant business strategist. I generally help making strategic action planning to optimize" 
+        }
+      ]);
+    }
+  }, [hasData]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -58,6 +73,18 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
     const userMessage = input;
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+
+    // Block logic if no data is uploaded
+    if (!hasData) {
+      setTimeout(() => {
+        setMessages(prev => [...prev, { 
+          role: 'bot', 
+          text: "You need to upload your sales / ledger data first. I need your business sales data for contextual grounding for making strategic planning, suggestions, analysis etc." 
+        }]);
+      }, 500);
+      return;
+    }
+
     setIsTyping(true);
 
     try {
@@ -145,7 +172,7 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
               <h2 className="font-bold text-lg leading-tight">AI Business Strategist</h2>
               <p className="text-[10px] text-indigo-100 flex items-center gap-1 uppercase font-black tracking-widest mt-0.5">
                 <ShieldCheck className="w-3 h-3" />
-                Grounding Active
+                {hasData ? "Grounding Active" : "WAITING FOR DATA"}
               </p>
             </div>
           </div>
@@ -257,8 +284,8 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Query strategist engine..."
-              className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm font-medium"
+              placeholder={hasData ? "Query strategist engine..." : "Please upload your data first..."}
+              className={`w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm font-medium ${!hasData ? 'cursor-not-allowed opacity-70' : ''}`}
             />
             <div className="flex justify-end">
               <button 
