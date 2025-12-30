@@ -18,18 +18,23 @@ export const generateStrategicPlan = async (
 
     INSTRUCTIONS:
     1. MARKET INTELLIGENCE: Perform a real-time search for hospitality market trends, competitor pricing, and demand patterns in ${location}.
-    2. RECOMMENDATIONS: Provide comprehensive, multi-step strategic execution roadmaps for each recommendation. The 'action' field MUST be a detailed roadmap (not just a short title). For instance, specify technology stack requirements, operational shift changes, and pricing logic for high-impact concepts like 'Attribute-Based Selling (ABS)' or 'Hyper-Personalized Butler Services'.
+    
+    2. RECOMMENDATIONS: For each recommendation, provide:
+       - 'action': A VERY SHORT, punchy summary (max 10 words) for the UI dashboard.
+       - 'detailedAction': A comprehensive, multi-step strategic execution roadmap. This MUST be detailed (how/when/what), specifying tech stacks, operational shifts, and implementation phases (e.g. Month 1-3, Month 4-6).
+       
     3. PROJECTION: Generate a month-by-month profit margin projection array for ${timelineMonths} months.
+    
     4. SERVICE LINKINGS / CONSUMER INSIGHTS:
-       - Analyze the provided 'Hospitality Add-on Usage/Rating' and 'Non-Hospitality Add-on Usage/Rating' from the uploaded data.
-       - Map high ratings/usage to specific services: High Hosp Rating -> 'Luxury Spa' or 'Fine Dining'. High Non-Hosp Rating -> 'Exclusive City Tours' or 'Business Connectivity'.
-       - List 5-6 hotel services with usageScore (0-100) derived from the data trends and type ('Hospitality' or 'Non-Hospitality').
+       - Analyze provided 'Hospitality' and 'Non-Hospitality' data usage/ratings.
+       - List 5-6 hotel services with usageScore (0-100) and type.
+       
     5. RECOMMENDED INVESTMENT: 
-       - Calculate a minimum recommended investment amount specifically for Marketing growth.
-    6. OPERATIONAL COST PROJECTION (FOR OPS MANAGER):
-       - Project monthly operational costs for the next 3 months based on market overhead and internal performance.
-       - Identify which high-performing services (from consumer usage data) can have operational/maintenance costs reduced (specify % reduction).
-       - Calculate the specific impact of these reductions on overall revenue and profit.
+       - Calculate a minimum recommended investment for marketing/growth.
+       
+    6. OPERATIONAL COST PROJECTION:
+       - Project monthly operational costs for next 3 months.
+       - Calculate savings opportunities and impact.
 
     Format the final output as a JSON object strictly following the schema.
   `;
@@ -50,13 +55,14 @@ export const generateStrategicPlan = async (
               type: Type.OBJECT,
               properties: {
                 category: { type: Type.STRING },
-                action: { type: Type.STRING },
+                action: { type: Type.STRING, description: "Short summary (max 10 words)" },
+                detailedAction: { type: Type.STRING, description: "Detailed multi-step plan" },
                 goal: { type: Type.STRING },
                 example: { type: Type.STRING },
                 estimatedImpact: { type: Type.STRING },
                 priority: { type: Type.STRING }
               },
-              required: ["category", "action", "goal", "example", "estimatedImpact", "priority"]
+              required: ["category", "action", "detailedAction", "goal", "example", "estimatedImpact", "priority"]
             }
           },
           projectedProfitability: {

@@ -1,6 +1,7 @@
+
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { StrategicPlan, Recommendation, StakeholderRole } from "../types";
+import { StrategicPlan, Recommendation, StakeholderRole, OperationalCostProjection } from "../types";
 
 export const exportPlanToPDF = (plan: StrategicPlan, xValue: number, yValue: number) => {
   const doc = new jsPDF();
@@ -44,7 +45,7 @@ export const exportPlanToPDF = (plan: StrategicPlan, xValue: number, yValue: num
     const displayImpact = rec.estimatedImpact.startsWith('+') ? rec.estimatedImpact : `+${rec.estimatedImpact}`;
     return [
       rec.category,
-      rec.action,
+      rec.detailedAction, 
       rec.goal,
       rec.priority,
       displayImpact
@@ -53,15 +54,15 @@ export const exportPlanToPDF = (plan: StrategicPlan, xValue: number, yValue: num
 
   autoTable(doc, {
     startY: tableStartY,
-    head: [['Category', 'Action', 'Goal', 'Priority', 'Impact']],
+    head: [['Category', 'Detailed Action Plan', 'Goal', 'Priority', 'Impact']],
     body: tableData,
     headStyles: { fillColor: [79, 70, 229], fontSize: 9 },
     bodyStyles: { fontSize: 8 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: {
       0: { cellWidth: 30 },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 60 },
+      1: { cellWidth: 80 },
+      2: { cellWidth: 30 },
       3: { cellWidth: 20 },
       4: { cellWidth: 20, fontStyle: 'bold', textColor: [79, 70, 229] }
     }
@@ -84,16 +85,14 @@ export const exportPlanToPDF = (plan: StrategicPlan, xValue: number, yValue: num
   doc.save(`ProfitPath_Strategic_Roadmap_${xValue}pct.pdf`);
 };
 
-/**
- * Exports a role-specific strategy report
- */
 export const exportRoleStrategyToPDF = (
   role: StakeholderRole,
   recommendations: Recommendation[],
   summary: string,
   location: string,
   targetIncrease: number,
-  timeline: number
+  timeline: number,
+  operationalCosts?: OperationalCostProjection[]
 ) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -137,61 +136,92 @@ export const exportRoleStrategyToPDF = (
   const splitSummary = doc.splitTextToSize(summary, pageWidth - 40);
   doc.text(splitSummary, 20, 72);
 
-  const summaryHeight = splitSummary.length * 6;
-  const tableStartY = 85 + summaryHeight;
+  let currentY = 85 + (splitSummary.length * 6);
 
-  // Table Heading
-  doc.setTextColor(30, 41, 59);
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("Tailored Action Items", 20, tableStartY);
+  // Recommendations Section
+  if (recommendations.length > 0) {
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Tailored Execution Roadmaps", 20, currentY);
 
-  // Recommendations Table
-  const tableData = recommendations.map(rec => {
-    const displayImpact = rec.estimatedImpact.startsWith('+') ? rec.estimatedImpact : `+${rec.estimatedImpact}`;
-    return [
-      rec.priority,
-      rec.category,
-      rec.action,
-      rec.goal,
-      displayImpact
-    ];
-  });
+    const tableData = recommendations.map(rec => {
+      const displayImpact = rec.estimatedImpact.startsWith('+') ? rec.estimatedImpact : `+${rec.estimatedImpact}`;
+      return [
+        rec.priority,
+        rec.category,
+        rec.detailedAction, 
+        rec.goal,
+        displayImpact
+      ];
+    });
 
-  autoTable(doc, {
-    startY: tableStartY + 5,
-    margin: { left: 20, right: 20 },
-    head: [['Priority', 'Category', 'Action', 'Target Goal', 'Impact']],
-    body: tableData,
-    theme: 'grid',
-    headStyles: { 
-      fillColor: [79, 70, 229], 
-      fontSize: 10, 
-      fontStyle: 'bold',
-      halign: 'center',
-      cellPadding: 4
-    },
-    bodyStyles: { 
-      fontSize: 9, 
-      cellPadding: 4,
-      textColor: [51, 65, 85]
-    },
-    columnStyles: {
-      0: { halign: 'center', fontStyle: 'bold', cellWidth: 20 },
-      1: { cellWidth: 25 },
-      2: { cellWidth: 45, fontStyle: 'bold' },
-      3: { cellWidth: 50 },
-      4: { halign: 'center', fontStyle: 'bold', textColor: [16, 185, 129] }
-    },
-    didParseCell: function(data) {
-      if (data.section === 'body' && data.column.index === 0) {
-        const priority = data.cell.raw as string;
-        if (priority === 'High') data.cell.styles.textColor = [220, 38, 38];
-        if (priority === 'Medium') data.cell.styles.textColor = [217, 119, 6];
-        if (priority === 'Low') data.cell.styles.textColor = [16, 185, 129];
+    autoTable(doc, {
+      startY: currentY + 5,
+      margin: { left: 20, right: 20 },
+      head: [['Priority', 'Category', 'Detailed Action Plan', 'Target Goal', 'Impact']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [79, 70, 229], 
+        fontSize: 10, 
+        fontStyle: 'bold',
+        halign: 'center',
+        cellPadding: 4
+      },
+      bodyStyles: { 
+        fontSize: 9, 
+        cellPadding: 4,
+        textColor: [51, 65, 85]
+      },
+      columnStyles: {
+        0: { halign: 'center', fontStyle: 'bold', cellWidth: 20 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 65, fontStyle: 'bold' },
+        3: { cellWidth: 40 },
+        4: { halign: 'center', fontStyle: 'bold', textColor: [16, 185, 129] }
+      },
+      didParseCell: function(data) {
+        if (data.section === 'body' && data.column.index === 0) {
+          const priority = data.cell.raw as string;
+          if (priority === 'High') data.cell.styles.textColor = [220, 38, 38];
+          if (priority === 'Medium') data.cell.styles.textColor = [217, 119, 6];
+          if (priority === 'Low') data.cell.styles.textColor = [16, 185, 129];
+        }
       }
+    });
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+  }
+
+  // Operational Costs Section (if exists and relevant, especially for Ops Manager or as additional data)
+  if (operationalCosts && operationalCosts.length > 0) {
+    if (currentY > 240) {
+      doc.addPage();
+      currentY = 25;
     }
-  });
+    
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Monthly Operational Costs (Next 3 Months)", 20, currentY);
+
+    const costTableData = operationalCosts.map(cost => [
+      cost.month,
+      cost.cost,
+      cost.savingsOpportunity,
+      cost.impactOnProfit
+    ]);
+
+    autoTable(doc, {
+      startY: currentY + 5,
+      margin: { left: 20, right: 20 },
+      head: [['Month', 'Estimated Cost', 'Savings Opportunity', 'Profit Impact']],
+      body: costTableData,
+      theme: 'striped',
+      headStyles: { fillColor: [71, 85, 105], fontSize: 10 },
+      bodyStyles: { fontSize: 9 }
+    });
+  }
 
   // Footer
   const pageCount = doc.internal.getNumberOfPages();
@@ -211,24 +241,17 @@ export const exportRoleStrategyToPDF = (
   doc.save(fileName);
 };
 
-// Simplified Bot Drawing for PDF (resembling the BotIcon component)
 const drawBotIcon = (doc: jsPDF, x: number, y: number, size: number, color: number[]) => {
   doc.setDrawColor(color[0], color[1], color[2]);
   doc.setLineWidth(0.3);
-  
-  // Head
   doc.roundedRect(x + (size * 0.2), y + (size * 0.35), size * 0.6, size * 0.5, size * 0.1, size * 0.1, 'D');
-  // Ears
   doc.roundedRect(x + (size * 0.05), y + (size * 0.5), size * 0.15, size * 0.2, size * 0.05, size * 0.05, 'D');
   doc.roundedRect(x + (size * 0.8), y + (size * 0.5), size * 0.15, size * 0.2, size * 0.05, size * 0.05, 'D');
-  // Antenna
   doc.line(x + (size * 0.4), y + (size * 0.35), x + (size * 0.4), y + (size * 0.2));
   doc.setFillColor(color[0], color[1], color[2]);
   doc.circle(x + (size * 0.4), y + (size * 0.17), size * 0.05, 'F');
-  // Eyes
   doc.circle(x + (size * 0.4), y + (size * 0.55), size * 0.05, 'D');
   doc.circle(x + (size * 0.6), y + (size * 0.55), size * 0.05, 'D');
-  // Mouth (Simple line)
   doc.line(x + (size * 0.45), y + (size * 0.7), x + (size * 0.55), y + (size * 0.7));
 };
 
@@ -236,7 +259,6 @@ const drawAvatar = (doc: jsPDF, x: number, y: number, isUser: boolean) => {
   const size = 10;
   if (isUser) {
     doc.setFillColor(79, 70, 229);
-    // Person Icon 
     doc.circle(x + size / 2, y + size * 0.3, size * 0.2, 'F');
     doc.ellipse(x + size / 2, y + size * 0.8, size * 0.4, size * 0.2, 'F');
   } else {
@@ -299,14 +321,11 @@ export const exportChatToPDF = (messages: any[]) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
-  const contentX = margin + 15; // Where the text actually starts (to the right of icon)
+  const contentX = margin + 15; 
   const maxLineWidth = pageWidth - contentX - margin;
 
-  // Header
   doc.setFillColor(79, 70, 229);
   doc.rect(0, 0, pageWidth, 35, 'F');
-  
-  // Header Icon
   drawBotIcon(doc, margin, 8, 18, [255, 255, 255]);
   
   doc.setTextColor(255, 255, 255);
@@ -320,59 +339,38 @@ export const exportChatToPDF = (messages: any[]) => {
   let yOffset = 50;
 
   messages.forEach((msg) => {
-    // Check for page break before starting new message
     if (yOffset > 250) {
       doc.addPage();
       yOffset = 25;
     }
-
-    // Avatar Icon
     drawAvatar(doc, margin, yOffset, msg.role === 'user');
-
-    // Message Prefix for Flow
     const rolePrefix = msg.role === 'user' ? 'YOU: ' : 'STRATEGIST: ';
-    
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(30, 41, 59);
-
     const blocks = parseMarkdownTables(msg.text);
     let isFirstBlock = true;
 
     blocks.forEach((block) => {
       if (block.type === 'text') {
-        // Clean text from basic markdown
-        let cleanText = block.content
-          .replace(/#{1,6}\s?/g, '')
-          .replace(/\*\*/g, '')
-          .replace(/\*/g, '')
-          .replace(/-\s/g, '• ')
-          .trim();
-
+        let cleanText = block.content.replace(/#{1,6}\s?/g, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/-\s/g, '• ').trim();
         if (isFirstBlock) {
-          // Prepend role prefix to first line of text
           const prefixAndText = rolePrefix + cleanText;
           const splitLines = doc.splitTextToSize(prefixAndText, maxLineWidth);
-          
           splitLines.forEach((line: string, lineIdx: number) => {
             if (yOffset > 275) {
               doc.addPage();
               yOffset = 25;
             }
-            
-            // Highlight the prefix in bold/grey
             if (lineIdx === 0) {
               doc.setFont("helvetica", "bold");
               doc.setTextColor(148, 163, 184);
               doc.setFontSize(8);
-              doc.text(rolePrefix, contentX, yOffset + 1); // small offset adjustment for baseline
-              
+              doc.text(rolePrefix, contentX, yOffset + 1); 
               const prefixWidth = doc.getTextWidth(rolePrefix);
-              
               doc.setFont("helvetica", "normal");
               doc.setTextColor(30, 41, 59);
               doc.setFontSize(10);
-              // Extract original line content minus prefix for correct rendering position
               const lineContent = line.substring(rolePrefix.length);
               doc.text(lineContent, contentX + prefixWidth, yOffset + 1);
             } else {
@@ -385,7 +383,6 @@ export const exportChatToPDF = (messages: any[]) => {
           });
           isFirstBlock = false;
         } else {
-          // Standard text block
           const splitLines = doc.splitTextToSize(cleanText, maxLineWidth);
           splitLines.forEach((line: string) => {
             if (yOffset > 275) {
@@ -402,7 +399,6 @@ export const exportChatToPDF = (messages: any[]) => {
           doc.addPage();
           yOffset = 25;
         }
-
         autoTable(doc, {
           startY: yOffset,
           head: [block.content.headers],
@@ -413,13 +409,10 @@ export const exportChatToPDF = (messages: any[]) => {
           bodyStyles: { fontSize: 8 },
           styles: { cellPadding: 2 }
         });
-        
         yOffset = (doc as any).lastAutoTable.finalY + 8;
         isFirstBlock = false;
       }
     });
-
-    // Substantial gap between messages for clarity
     yOffset += 12;
   });
 
@@ -435,6 +428,5 @@ export const exportChatToPDF = (messages: any[]) => {
       { align: "center" }
     );
   }
-
   doc.save(`ProfitPath_Consultation_${new Date().getTime()}.pdf`);
 };

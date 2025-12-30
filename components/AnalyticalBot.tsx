@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
@@ -39,7 +40,7 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
       setMessages([
         { 
           role: 'bot', 
-          text: "Hello! I am your AI Business Strategist. I have analyzed your property's current data and I'm ready to perform what-if analyses, competitor benchmarks, or market trend evaluations. What's on your mind today?" 
+          text: "Hello! I am your AI Business Strategist. I'm ready to perform what-if analyses, market competitor benchmarks, or market trend evaluations. What's on your mind today?" 
         }
       ]);
     } else {

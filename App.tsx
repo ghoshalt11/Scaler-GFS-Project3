@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   TrendingUp, 
@@ -23,9 +22,9 @@ import {
   Search,
   Calculator,
   Download,
-  // Added Zap and Wallet to fix import errors
   Zap,
-  Wallet
+  Wallet,
+  Play
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { generateStrategicPlan } from './services/geminiService';
@@ -53,6 +52,101 @@ export const BotIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
 );
 
 const STORAGE_KEY = 'revelevate_hotel_data';
+
+const SAMPLE_CSV_CONTENT = `date,total_revenue,rooms_occupied,total_inventory,channel,cost_allocation,average_service_rating,feedback_score,rating_count,feedback_count,avg_hosp_addon_pct_per_booking,avg_non_hosp_addon_pct_per_booking,avg_hosp_addon_rating,avg_non_hosp_addon_rating,seasonal_booking_pct,professional_booking_pct,festival_booking_pct,event_booking_pct,other_booking_pct
+2025-01-01,125000,50,80,Direct,42000,4.3,83,46,40,42,18,4.4,4.1,20,40,24,12,4
+2025-01-01,98000,38,80,OTA,36000,4.1,78,34,29,38,16,4.2,3.9,22,46,18,10,4
+2025-01-01,45000,15,80,GDS,18000,4.0,75,13,11,34,14,4.1,3.8,18,52,14,12,4
+2025-01-02,132500,55,80,Direct,46000,4.5,88,50,44,45,20,4.6,4.2,18,44,22,12,4
+2025-01-02,105000,42,80,OTA,39000,4.2,80,38,33,40,17,4.3,4.0,20,48,18,10,4
+2025-01-02,52000,18,80,GDS,21000,4.1,77,16,14,36,15,4.2,3.9,16,54,14,12,4
+2025-01-03,148000,60,80,Direct,50000,4.6,90,55,48,48,22,4.7,4.3,22,38,26,10,4
+2025-01-03,112000,45,80,OTA,41000,4.3,84,41,36,42,18,4.4,4.1,24,42,20,10,4
+2025-01-03,60000,20,80,GDS,23000,4.2,81,18,15,38,16,4.3,4.0,20,48,16,12,4
+2025-01-04,155000,62,80,Direct,52000,4.6,91,57,50,50,24,4.8,4.4,26,34,28,8,4
+2025-01-04,118000,47,80,OTA,43000,4.3,85,43,37,44,19,4.5,4.1,28,38,22,8,4
+2025-01-04,65000,22,80,GDS,25000,4.2,82,20,17,40,17,4.3,4.0,24,44,18,10,4
+2025-01-05,160000,65,80,Direct,54000,4.7,92,60,54,52,25,4.8,4.5,30,30,30,6,4
+2025-01-05,120000,48,80,OTA,44000,4.4,86,44,38,46,20,4.6,4.2,32,34,24,6,4
+2025-01-05,70000,25,80,GDS,27000,4.3,83,23,19,42,18,4.4,4.1,28,40,20,8,4
+2025-01-06,158000,63,80,Direct,53000,4.6,90,58,52,51,24,4.7,4.4,28,32,30,6,4
+2025-01-06,119000,46,80,OTA,43500,4.3,85,42,36,45,19,4.5,4.1,30,36,24,6,4
+2025-01-06,68000,23,80,GDS,26000,4.2,82,21,18,41,17,4.3,4.0,26,42,22,6,4
+2025-01-07,162000,66,80,Direct,55000,4.7,93,61,55,53,26,4.9,4.6,24,36,34,2,4
+2025-01-07,121000,49,80,OTA,45000,4.4,87,45,39,47,21,4.6,4.2,26,40,28,2,4
+2025-01-07,72000,26,80,GDS,28000,4.3,84,24,20,43,19,4.4,4.1,22,46,26,2,4
+2025-01-08,165000,68,80,Direct,56000,4.8,94,63,57,55,27,4.9,4.6,34,26,36,0,4
+2025-01-08,123000,50,80,OTA,46000,4.5,88,46,41,49,22,4.7,4.3,36,30,30,0,4
+2025-01-08,75000,28,80,GDS,29000,4.4,85,26,22,45,20,4.5,4.2,32,36,28,0,4
+2025-01-09,168000,70,80,Direct,57000,4.8,95,65,59,56,28,5.0,4.7,38,22,38,0,2
+2025-01-09,125000,52,80,OTA,47000,4.5,89,48,43,50,23,4.7,4.3,40,26,32,0,2
+2025-01-09,78000,30,80,GDS,30000,4.4,86,28,24,46,21,4.6,4.2,36,32,30,0,2
+2025-01-10,170000,72,80,Direct,58000,4.9,96,67,61,58,30,5.0,4.8,42,18,38,0,2
+2025-01-10,128000,54,80,OTA,48000,4.6,90,50,45,52,24,4.8,4.4,44,22,32,0,2
+2025-01-10,80000,32,80,GDS,31000,4.5,87,30,26,48,22,4.7,4.3,40,28,30,0,2
+2025-01-11,172000,73,80,Direct,59000,4.9,96,68,62,59,31,5.0,4.8,46,16,36,0,2
+2025-01-11,130000,55,80,OTA,49000,4.6,91,51,46,53,25,4.8,4.4,48,20,30,0,2
+2025-01-11,82000,33,80,GDS,32000,4.5,88,31,27,49,23,4.7,4.3,44,26,28,0,2
+2025-01-12,175000,75,80,Direct,60000,4.9,97,70,64,60,32,5.0,4.9,50,14,34,0,2
+2025-01-12,132000,56,80,OTA,50000,4.7,92,52,47,54,26,4.9,4.5,52,18,28,0,2
+2025-01-12,84000,34,80,GDS,33000,4.6,89,32,28,50,24,4.8,4.4,48,24,26,0,2
+2025-01-13,178000,76,80,Direct,61000,4.9,97,71,65,61,33,5.0,4.9,54,12,32,0,2
+2025-01-13,134000,57,80,OTA,51000,4.7,93,53,48,55,27,4.9,4.5,56,16,26,0,2
+2025-01-13,86000,35,80,GDS,34000,4.6,90,33,29,51,25,4.8,4.4,52,22,24,0,2
+2025-01-14,180000,78,80,Direct,62000,5.0,98,73,67,62,34,5.0,4.9,58,10,30,0,2
+2025-01-14,136000,58,80,OTA,52000,4.8,94,54,49,56,28,4.9,4.6,60,14,24,0,2
+2025-01-14,88000,36,80,GDS,35000,4.7,91,34,30,52,26,4.8,4.5,56,20,22,0,2
+2025-01-15,182000,79,80,Direct,63000,5.0,99,74,68,63,35,5.0,4.9,60,8,30,0,2
+2025-01-15,138000,59,80,OTA,53000,4.8,95,55,50,57,29,4.9,4.6,62,12,24,0,2
+2025-01-15,90000,37,80,GDS,36000,4.7,92,35,31,53,27,4.8,4.5,58,18,22,0,2
+2025-01-16,185000,80,80,Direct,64000,5.0,99,75,69,64,36,5.0,5.0,64,6,28,0,2
+2025-01-16,140000,60,80,OTA,54000,4.8,95,56,51,58,30,4.9,4.6,66,10,22,0,2
+2025-01-16,92000,38,80,GDS,37000,4.7,93,36,32,54,28,4.8,4.5,62,16,20,0,2
+2025-01-17,183000,78,80,Direct,63000,4.9,98,73,67,62,34,5.0,4.9,60,10,28,0,2
+2025-01-17,139000,59,80,OTA,53500,4.7,94,55,50,56,28,4.9,4.6,62,14,22,0,2
+2025-01-17,91000,37,80,GDS,36500,4.6,92,35,31,52,26,4.8,4.5,58,20,20,0,2
+2025-01-18,180000,76,80,Direct,62000,4.9,97,71,65,61,33,5.0,4.9,56,12,30,0,2
+2025-01-18,137000,58,80,OTA,52500,4.7,93,54,49,55,27,4.9,4.6,58,16,24,0,2
+2025-01-18,89000,36,80,GDS,35500,4.6,91,34,30,51,25,4.8,4.4,54,22,22,0,2
+2025-01-19,178000,75,80,Direct,61000,4.8,96,70,64,60,32,4.9,4.8,52,14,32,0,2
+2025-01-19,135000,57,80,OTA,51500,4.6,92,53,48,54,26,4.8,4.5,54,18,26,0,2
+2025-01-19,87000,35,80,GDS,34500,4.5,90,33,29,50,24,4.7,4.4,50,24,24,0,2
+2025-01-20,175000,74,80,Direct,60000,4.8,95,69,63,59,31,4.9,4.8,50,16,32,0,2
+2025-01-20,133000,56,80,OTA,50500,4.6,91,52,47,53,25,4.8,4.5,52,20,26,0,2
+2025-01-20,85000,34,80,GDS,33500,4.5,89,32,28,49,23,4.7,4.3,48,26,24,0,2
+2025-01-21,172000,72,80,Direct,59000,4.7,94,67,61,58,30,4.8,4.7,48,18,32,0,2
+2025-01-21,131000,55,80,OTA,49500,4.5,90,51,46,52,24,4.7,4.4,50,22,26,0,2
+2025-01-21,83000,33,80,GDS,32500,4.4,88,31,27,48,22,4.6,4.3,46,28,24,0,2
+2025-01-22,170000,70,80,Direct,58000,4.7,93,65,59,57,29,4.8,4.7,46,20,32,0,2
+2025-01-22,129000,54,80,OTA,48500,4.5,89,50,45,51,23,4.7,4.4,48,24,26,0,2
+2025-01-22,81000,32,80,GDS,31500,4.4,87,30,26,47,21,4.6,4.2,44,30,24,0,2
+2025-01-23,168000,68,80,Direct,57000,4.6,92,63,57,56,28,4.7,4.6,44,22,32,0,2
+2025-01-23,127000,53,80,OTA,47500,4.4,88,49,44,50,22,4.6,4.3,46,26,26,0,2
+2025-01-23,79000,31,80,GDS,30500,4.3,86,29,25,46,20,4.5,4.2,42,32,24,0,2
+2025-01-24,165000,66,80,Direct,56000,4.6,91,61,55,55,27,4.7,4.6,42,24,32,0,2
+2025-01-24,125000,52,80,OTA,46500,4.4,87,48,43,49,21,4.6,4.3,44,28,26,0,2
+2025-01-24,77000,30,80,GDS,29500,4.3,85,28,24,45,19,4.5,4.1,40,34,24,0,2
+2025-01-25,162000,65,80,Direct,55000,4.5,90,60,54,54,26,4.6,4.5,40,26,32,0,2
+2025-01-25,123000,51,80,OTA,45500,4.3,86,47,42,48,20,4.5,4.2,42,30,26,0,2
+2025-01-25,75000,29,80,GDS,28500,4.2,84,27,23,44,18,4.4,4.1,38,36,24,0,2
+2025-01-26,160000,64,80,Direct,54000,4.5,89,59,53,53,25,4.6,4.5,38,28,32,0,2
+2025-01-26,121000,50,80,OTA,44500,4.3,85,46,41,47,19,4.5,4.2,40,32,26,0,2
+2025-01-26,73000,28,80,GDS,27500,4.2,83,26,22,43,17,4.3,4.0,36,38,24,0,2
+2025-01-27,158000,63,80,Direct,53000,4.4,88,58,52,52,24,4.5,4.4,36,30,32,0,2
+2025-01-27,119000,49,80,OTA,43500,4.2,84,45,40,46,18,4.4,4.1,38,34,26,0,2
+2025-01-27,71000,27,80,GDS,26500,4.1,82,25,21,42,16,4.2,3.9,34,40,24,0,2
+2025-01-28,155000,62,80,Direct,52000,4.4,87,57,51,51,23,4.5,4.4,34,32,32,0,2
+2025-01-28,117000,48,80,OTA,42500,4.2,83,44,39,45,17,4.4,4.1,36,36,26,0,2
+2025-01-28,69000,26,80,GDS,25500,4.1,81,24,20,41,15,4.2,3.9,32,42,24,0,2
+2025-01-29,152000,60,80,Direct,51000,4.3,86,55,49,50,22,4.4,4.3,32,34,32,0,2
+2025-01-29,115000,47,80,OTA,41500,4.1,82,43,38,44,16,4.3,4.0,34,38,26,0,2
+2025-01-29,67000,25,80,GDS,24500,4.0,80,23,19,40,14,4.1,3.8,30,44,24,0,2
+2025-01-30,150000,58,80,Direct,50000,4.3,85,53,47,49,21,4.4,4.3,30,36,32,0,2
+2025-01-30,113000,46,80,OTA,40500,4.1,81,42,37,43,15,4.3,4.0,32,40,26,0,2
+2025-01-30,65000,24,80,GDS,23500,4.0,79,22,18,39,13,4.1,3.8,28,46,24,0,2
+2025-01-31,148000,56,80,Direct,49000,4.2,84,51,45,48,20,4.3,4.2,28,38,32,0,2
+2025-01-31,111000,45,80,OTA,39500,4.0,80,41,36,42,14,4.2,3.9,30,42,26,0,2
+2025-01-31,63000,23,80,GDS,22500,3.9,78,21,17,38,12,4.0,3.7,26,48,24,0,2`;
 
 const App: React.FC = () => {
   const [xValue, setXValue] = useState(15);
@@ -163,6 +257,75 @@ const App: React.FC = () => {
     return JSON.parse(response.text || '{}');
   };
 
+  const processCSVContent = (content: string) => {
+    const lines = content.split('\n').map(line => line.split(',').map(cell => cell.trim()));
+    if (lines.length < 2) {
+      throw new Error("Empty or malformed CSV.");
+    }
+
+    const headers = lines[0].map(h => h.toLowerCase());
+    const dataRows = lines.slice(1).filter(row => row.length >= headers.length && row.some(cell => cell !== ''));
+
+    const revIdx = headers.findIndex(h => h.includes('revenue'));
+    const occIdx = headers.findIndex(h => h.includes('occupied'));
+    const invIdx = headers.findIndex(h => h.includes('inventory'));
+    const costIdx = headers.findIndex(h => h.includes('cost'));
+    const channelIdx = headers.findIndex(h => h.includes('channel'));
+    const ratingIdx = headers.findIndex(h => h.includes('service_rating'));
+    const hospUsageIdx = headers.findIndex(h => h.includes('hosp_addon_pct'));
+    const nonHospUsageIdx = headers.findIndex(h => h.includes('non_hosp_addon_pct'));
+    const hospRatingIdx = headers.findIndex(h => h.includes('hosp_addon_rating'));
+    const nonHospRatingIdx = headers.findIndex(h => h.includes('non_hosp_addon_rating'));
+
+    let totalRev = 0, totalOcc = 0, totalInv = 0, totalCost = 0, directCount = 0;
+    let totalSvcRating = 0, totalHospUsage = 0, totalNonHospUsage = 0, totalHospRating = 0, totalNonHospRating = 0;
+
+    dataRows.forEach(row => {
+      totalRev += parseFloat(row[revIdx]) || 0;
+      totalOcc += parseFloat(row[occIdx]) || 0;
+      totalInv += parseFloat(row[invIdx]) || 0;
+      totalCost += parseFloat(row[costIdx]) || 0;
+      totalSvcRating += parseFloat(row[ratingIdx]) || 0;
+      totalHospUsage += parseFloat(row[hospUsageIdx]) || 0;
+      totalNonHospUsage += parseFloat(row[nonHospUsageIdx]) || 0;
+      totalHospRating += parseFloat(row[hospRatingIdx]) || 0;
+      totalNonHospRating += parseFloat(row[nonHospRatingIdx]) || 0;
+      if (row[channelIdx]?.toLowerCase().includes('direct')) directCount++;
+    });
+
+    const transactions = dataRows.length;
+    return {
+      profitMargin: parseFloat((totalRev > 0 ? ((totalRev - totalCost) / totalRev) * 100 : 25).toFixed(1)),
+      transactions,
+      occRate: Math.round(totalInv > 0 ? (totalOcc / totalInv) * 100 : 68),
+      adr: Math.round(totalOcc > 0 ? totalRev / totalOcc : 185),
+      direct: Math.round(transactions > 0 ? (directCount / transactions) * 100 : 22),
+      ota: Math.round(100 - (transactions > 0 ? (directCount / transactions) * 100 : 22)),
+      extraMetrics: {
+        avgServiceRating: parseFloat((totalSvcRating / transactions).toFixed(1)),
+        hospAddonUsage: Math.round(totalHospUsage / transactions),
+        nonHospAddonUsage: Math.round(totalNonHospUsage / transactions),
+        hospAddonRating: parseFloat((totalHospRating / transactions).toFixed(1)),
+        nonHospAddonRating: parseFloat((totalNonHospRating / transactions).toFixed(1))
+      }
+    };
+  };
+
+  const updatePerformanceData = (processed: any, sourceName: string) => {
+    const newData = {
+      ...processed,
+      lastSync: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      source: sourceName,
+      headers: [],
+      isDefault: false
+    };
+
+    setPerformanceData(newData);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+    setIsUploadModalOpen(false);
+    setLoading(false);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -172,66 +335,13 @@ const App: React.FC = () => {
     reader.onload = async (event) => {
       const content = event.target?.result as string;
       
-      let processedData;
-      if (file.name.endsWith('.csv')) {
-        const lines = content.split('\n').map(line => line.split(',').map(cell => cell.trim()));
-        if (lines.length < 2) {
-          setError("The uploaded file appears to be empty or malformed.");
-          setLoading(false);
-          return;
-        }
-
-        const headers = lines[0].map(h => h.toLowerCase());
-        const dataRows = lines.slice(1).filter(row => row.length >= headers.length);
-
-        const revIdx = headers.findIndex(h => h.includes('revenue'));
-        const occIdx = headers.findIndex(h => h.includes('occupied'));
-        const invIdx = headers.findIndex(h => h.includes('inventory'));
-        const costIdx = headers.findIndex(h => h.includes('cost'));
-        const channelIdx = headers.findIndex(h => h.includes('channel'));
-        const ratingIdx = headers.findIndex(h => h.includes('service_rating'));
-        const hospUsageIdx = headers.findIndex(h => h.includes('hosp_addon_pct'));
-        const nonHospUsageIdx = headers.findIndex(h => h.includes('non_hosp_addon_pct'));
-        const hospRatingIdx = headers.findIndex(h => h.includes('hosp_addon_rating'));
-        const nonHospRatingIdx = headers.findIndex(h => h.includes('non_hosp_addon_rating'));
-
-        let totalRev = 0, totalOcc = 0, totalInv = 0, totalCost = 0, directCount = 0;
-        let totalSvcRating = 0, totalHospUsage = 0, totalNonHospUsage = 0, totalHospRating = 0, totalNonHospRating = 0;
-
-        dataRows.forEach(row => {
-          totalRev += parseFloat(row[revIdx]) || 0;
-          totalOcc += parseFloat(row[occIdx]) || 0;
-          totalInv += parseFloat(row[invIdx]) || 0;
-          totalCost += parseFloat(row[costIdx]) || 0;
-          totalSvcRating += parseFloat(row[ratingIdx]) || 0;
-          totalHospUsage += parseFloat(row[hospUsageIdx]) || 0;
-          totalNonHospUsage += parseFloat(row[nonHospUsageIdx]) || 0;
-          totalHospRating += parseFloat(row[hospRatingIdx]) || 0;
-          totalNonHospRating += parseFloat(row[nonHospRatingIdx]) || 0;
-          if (row[channelIdx]?.toLowerCase().includes('direct')) directCount++;
-        });
-
-        const transactions = dataRows.length;
-        processedData = {
-          profitMargin: parseFloat((totalRev > 0 ? ((totalRev - totalCost) / totalRev) * 100 : 25).toFixed(1)),
-          transactions,
-          occRate: Math.round(totalInv > 0 ? (totalOcc / totalInv) * 100 : 68),
-          adr: Math.round(totalOcc > 0 ? totalRev / totalOcc : 185),
-          direct: Math.round(transactions > 0 ? (directCount / transactions) * 100 : 22),
-          ota: Math.round(100 - (transactions > 0 ? (directCount / transactions) * 100 : 22)),
-          extraMetrics: {
-            avgServiceRating: parseFloat((totalSvcRating / transactions).toFixed(1)),
-            hospAddonUsage: Math.round(totalHospUsage / transactions),
-            nonHospAddonUsage: Math.round(totalNonHospUsage / transactions),
-            hospAddonRating: parseFloat((totalHospRating / transactions).toFixed(1)),
-            nonHospAddonRating: parseFloat((totalNonHospRating / transactions).toFixed(1))
-          }
-        };
-      } else {
-        // Handle unstructured text
-        try {
+      try {
+        if (file.name.endsWith('.csv')) {
+          const processed = processCSVContent(content);
+          updatePerformanceData(processed, file.name);
+        } else {
           const extracted = await extractFromUnstructured(content);
-          processedData = {
+          const processed = {
             profitMargin: parseFloat((extracted.revenue > 0 ? ((extracted.revenue - extracted.cost) / extracted.revenue) * 100 : 25).toFixed(1)),
             transactions: extracted.total_bookings_count || 100,
             occRate: Math.round(extracted.total_rooms > 0 ? (extracted.occupied_rooms / extracted.total_rooms) * 100 : 65),
@@ -246,27 +356,25 @@ const App: React.FC = () => {
               nonHospAddonRating: extracted.non_hosp_addon_rating || 4.0
             }
           };
-        } catch (err) {
-          setError("AI extraction failed for unstructured data.");
-          setLoading(false);
-          return;
+          updatePerformanceData(processed, file.name);
         }
+      } catch (err: any) {
+        setError(err.message || "Failed to process content.");
+        setLoading(false);
       }
-
-      const newData = {
-        ...processedData,
-        lastSync: new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        source: `AI Analyzed: ${file.name}`,
-        headers: [],
-        isDefault: false
-      };
-
-      setPerformanceData(newData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-      setIsUploadModalOpen(false);
-      setLoading(false);
     };
     reader.readAsText(file);
+  };
+
+  const handleLoadSampleData = () => {
+    setLoading(true);
+    try {
+      const processed = processCSVContent(SAMPLE_CSV_CONTENT);
+      updatePerformanceData(processed, "hotel_sales_ledger_trnx_v2.csv");
+    } catch (err: any) {
+      setError("Failed to load sample data.");
+      setLoading(false);
+    }
   };
 
   const getRoleIcon = (role: StakeholderRole) => {
@@ -282,17 +390,18 @@ const App: React.FC = () => {
     if (selectedRole === StakeholderRole.MARKETING_HEAD) return rec.category.includes('Experience') || rec.category.includes('Revenue');
     if (selectedRole === StakeholderRole.OPERATIONS_MANAGER) return rec.category.includes('Efficiency') || rec.category.includes('Investment');
     return true;
-  });
+  }) || [];
 
   const handleExportRoleStrategy = () => {
-    if (!plan || !filteredRecommendations) return;
+    if (!plan) return;
     exportRoleStrategyToPDF(
       selectedRole,
       filteredRecommendations,
       plan.summary,
       location,
       xValue,
-      yValue
+      yValue,
+      plan.operationalCostProjections
     );
   };
 
@@ -357,7 +466,6 @@ const App: React.FC = () => {
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:font-medium shadow-inner"
                       />
                     </div>
-                    {/* Guidance Label / Catchy Note */}
                     <div className="relative group overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200 shadow-sm">
                       <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
                       <div className="flex items-start gap-3">
@@ -442,7 +550,7 @@ const App: React.FC = () => {
                   <>
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-4">
-                        <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Current Month Performance</h3>
+                        <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Quick Sales Performance Snapshot</h3>
                         <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100 uppercase tracking-tight">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Calculated From Ledger
@@ -570,7 +678,7 @@ const App: React.FC = () => {
                       <div className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center gap-3">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2 flex items-center gap-1.5">
                           <Globe className="w-3 h-3" />
-                          Intelligence Sources:
+                          GROUNDED SOURCES:
                         </span>
                         {plan.sources.map((src, idx) => (
                           <a key={idx} href={src.uri} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 transition-colors">
@@ -580,7 +688,6 @@ const App: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Conditional Block: Marketing/Investment or Operations/Cost */}
                     {selectedRole === StakeholderRole.OPERATIONS_MANAGER ? (
                       plan.operationalCostProjections && (
                         <div className="bg-gradient-to-br from-slate-900 to-indigo-950 p-8 rounded-3xl text-white shadow-xl relative overflow-hidden group border border-white/5">
@@ -715,7 +822,9 @@ const App: React.FC = () => {
                             </div>
                             <div className="md:w-40 flex flex-col items-center justify-center p-6 bg-slate-50 rounded-2xl border border-slate-100 shrink-0">
                               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center">Profit Impact</span>
-                              <span className="text-sm font-semibold text-slate-900 tracking-tight leading-tight text-center">+{rec.estimatedImpact}</span>
+                              <span className="text-sm font-semibold text-slate-900 tracking-tight leading-tight text-center">
+                                {rec.estimatedImpact.replace(/^\++/g, '+').startsWith('+') ? rec.estimatedImpact.replace(/^\++/g, '+') : '+' + rec.estimatedImpact.replace(/^\++/g, '+')}
+                              </span>
                               <div className="mt-2 flex items-center gap-1.5 px-2 py-0.5 bg-white rounded-md border border-indigo-100">
                                   <TrendingUp className="w-3 h-3 text-slate-500" />
                                   <span className="text-[9px] font-bold text-slate-600 uppercase">Growth Index</span>
@@ -743,7 +852,7 @@ const App: React.FC = () => {
                   <FileSpreadsheet className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">Upload Ledger</h2>
+                  <h2 className="text-xl font-black text-slate-900">Upload Sales/Ledger/Trnx. File</h2>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Performance Sync</p>
                 </div>
               </div>
@@ -751,13 +860,27 @@ const App: React.FC = () => {
                 <X className="w-6 h-6 text-slate-400" />
               </button>
             </div>
-            <div className="p-8 space-y-8">
-              <div className="bg-indigo-50/50 rounded-2xl p-6 border border-indigo-100 relative overflow-hidden">
+            <div className="p-8 space-y-6">
+              <div className="flex items-center justify-between bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
+                <div>
+                  <h4 className="text-sm font-black text-indigo-900">Don't have a file ready?</h4>
+                  <p className="text-xs text-indigo-700 font-medium">Test ProfitPath AI instantly with our sample hotel sales data.</p>
+                </div>
+                <button 
+                  onClick={handleLoadSampleData}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md transition-all active:scale-95 shrink-0"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  TRY SAMPLE DATA
+                </button>
+              </div>
+
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 relative overflow-hidden">
                 <div className="absolute -top-6 -right-6 opacity-5">
                    <Info className="w-32 h-32 text-indigo-600" />
                 </div>
-                <h4 className="flex items-center gap-2 text-sm font-black text-indigo-700 uppercase tracking-wider mb-4">
-                  <Info className="w-4 h-4" />
+                <h4 className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-wider mb-4">
+                  <Info className="w-3.5 h-3.5" />
                   SCHEMA REQUIREMENTS
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-[11px]">
@@ -767,7 +890,8 @@ const App: React.FC = () => {
                   <div><span className="font-black text-slate-800">hosp_addon_rating</span> - Hospitality service liking</div>
                 </div>
               </div>
-              <div onClick={() => fileInputRef.current?.click()} className="group cursor-pointer border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex flex-col items-center gap-4">
+              
+              <div onClick={() => fileInputRef.current?.click()} className="group cursor-pointer border-2 border-dashed border-slate-200 rounded-3xl p-5 text-center hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex flex-col items-center gap-4">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-indigo-100 transition-all">
                   <CloudUpload className="w-8 h-8 text-slate-400 group-hover:text-indigo-600" />
                 </div>
@@ -779,15 +903,14 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
-              <button onClick={() => setIsUploadModalOpen(false)} className="px-6 py-2.5 bg-slate-200 text-slate-600 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-300 transition-colors">
-                Cancel
+              <button onClick={() => setIsUploadModalOpen(false)} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-100 transition-colors shadow-sm">
+                CANCEL
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Passing hasData prop to Bot */}
       <AnalyticalBot 
         isOpen={isBotOpen} 
         onClose={() => setIsBotOpen(false)} 

@@ -6,7 +6,8 @@ export enum StakeholderRole {
 
 export interface Recommendation {
   category: string;
-  action: string;
+  action: string; // Short summary for UI
+  detailedAction: string; // Full roadmap for PDF
   goal: string;
   example: string;
   estimatedImpact: string;

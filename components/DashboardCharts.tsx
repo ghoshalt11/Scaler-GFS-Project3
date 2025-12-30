@@ -53,7 +53,7 @@ const CustomImpactTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-white p-5 border border-slate-100 shadow-2xl rounded-xl w-72 sm:w-80 ring-1 ring-slate-900/10 pointer-events-none z-[100]">
+      <div className="bg-white p-5 border border-slate-100 shadow-2xl rounded-xl w-72 sm:w-80 ring-1 ring-slate-900/10 pointer-events-none z-[1000]">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 whitespace-normal leading-tight">
           {data.name}
         </p>
@@ -61,12 +61,12 @@ const CustomImpactTooltip = ({ active, payload }: any) => {
           Total Impact: +{data.impact.toFixed(1)}% Profit
         </p>
         <div className="space-y-2 border-t border-slate-50 pt-3">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Key Actions:</p>
-          <ul className="space-y-2">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Quick Actions:</p>
+          <ul className="space-y-1">
             {data.actions.map((action: string, i: number) => (
-              <li key={i} className="text-[11px] text-slate-600 leading-snug flex gap-2">
+              <li key={i} className="text-[10px] text-slate-600 leading-snug flex gap-2">
                 <span className="text-indigo-400 font-bold shrink-0">•</span>
-                <span className="whitespace-normal">{action}</span>
+                <span className="whitespace-normal line-clamp-2">{action}</span>
               </li>
             ))}
           </ul>
@@ -81,7 +81,11 @@ export const CategoryImpactChart: React.FC<{ recommendations: Recommendation[] }
   const categories = Array.from(new Set(recommendations.map(r => r.category)));
   const data = categories.map(cat => {
     const items = recommendations.filter(r => r.category === cat);
-    const totalImpact = items.reduce((acc, curr) => acc + (parseFloat(curr.estimatedImpact) || 0), 0);
+    // Ensure we parse values like "+5.5%" or "5.5" correctly
+    const totalImpact = items.reduce((acc, curr) => {
+      const val = parseFloat(curr.estimatedImpact.replace(/[^\d.-]/g, '')) || 0;
+      return acc + val;
+    }, 0);
     const actions = items.map(i => i.action);
     return { name: cat, impact: totalImpact, actions };
   });
@@ -91,17 +95,24 @@ export const CategoryImpactChart: React.FC<{ recommendations: Recommendation[] }
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ left: -20, right: 30 }}>
+        <BarChart data={data} layout="vertical" margin={{ left: -10, right: 30, top: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-          <XAxis type="number" hide />
-          <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={10} width={120} tick={{ fontSize: 9 }} />
+          <XAxis type="number" domain={[0, 'auto']} hide />
+          <YAxis 
+            dataKey="name" 
+            type="category" 
+            stroke="#64748b" 
+            fontSize={9} 
+            width={100} 
+            tick={{ fontSize: 9, fontWeight: 700 }} 
+          />
           <Tooltip 
             content={<CustomImpactTooltip />} 
             cursor={{ fill: 'rgba(79, 70, 229, 0.05)' }}
             allowEscapeViewBox={{ x: true, y: true }}
             wrapperStyle={{ zIndex: 1000 }}
           />
-          <Bar dataKey="impact" radius={[0, 4, 4, 0]} barSize={32}>
+          <Bar dataKey="impact" radius={[0, 4, 4, 0]} barSize={24}>
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
