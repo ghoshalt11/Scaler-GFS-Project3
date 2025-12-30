@@ -1,10 +1,7 @@
-
 export enum StakeholderRole {
-  GENERAL_MANAGER = 'General Manager',
   REVENUE_MANAGER = 'Revenue Manager',
   MARKETING_HEAD = 'Marketing Head',
-  OPERATIONS_MANAGER = 'Operations Manager',
-  FINANCE_DIRECTOR = 'Finance Director'
+  OPERATIONS_MANAGER = 'Operations Manager'
 }
 
 export interface Recommendation {
@@ -22,11 +19,25 @@ export interface ConsumerInsight {
   type: 'Hospitality' | 'Non-Hospitality';
 }
 
+export interface OperationalCostProjection {
+  month: string;
+  cost: string;
+  savingsOpportunity: string;
+  impactOnProfit: string;
+}
+
 export interface StrategicPlan {
   recommendations: Recommendation[];
   summary: string;
   projectedProfitability: number[]; // month projection
   consumerInsights: ConsumerInsight[];
+  recommendedInvestment?: {
+    amount: string;
+    period: string;
+    rationale: string;
+  };
+  operationalCostProjections?: OperationalCostProjection[];
+  sources?: { title: string; uri: string }[];
 }
 
 export interface HotelStats {

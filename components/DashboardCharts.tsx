@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -12,16 +11,24 @@ interface ChartProps {
 }
 
 export const ProfitProjectionChart: React.FC<ChartProps> = ({ data, target }) => {
-  const chartData = data.map((val, idx) => ({
-    month: `M${idx + 1}`,
-    profit: parseFloat(val.toFixed(2)),
-    target: parseFloat((25 + (target / data.length) * (idx + 1)).toFixed(2)) // Simplified baseline target progression
-  }));
+  // Prepend current state (Month 0)
+  const chartData = [
+    {
+      month: 'Now',
+      profit: 25, // Current baseline
+      target: 25
+    },
+    ...data.map((val, idx) => ({
+      month: `M${idx + 1}`,
+      profit: parseFloat(val.toFixed(2)),
+      target: parseFloat((25 + (target / data.length) * (idx + 1)).toFixed(2))
+    }))
+  ];
 
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData}>
+        <AreaChart data={chartData} margin={{ left: -35, right: 10, top: 10, bottom: 0 }}>
           <defs>
             <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
@@ -32,7 +39,7 @@ export const ProfitProjectionChart: React.FC<ChartProps> = ({ data, target }) =>
           <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
           <YAxis stroke="#64748b" fontSize={12} tickFormatter={(val) => `${val}%`} />
           <Tooltip 
-            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', zIndex: 100 }}
           />
           <Area type="monotone" dataKey="profit" stroke="#4f46e5" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={3} />
           <Area type="monotone" dataKey="target" stroke="#94a3b8" strokeDasharray="5 5" fill="none" />
@@ -46,16 +53,20 @@ const CustomImpactTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-white p-4 border border-slate-100 shadow-xl rounded-xl max-w-xs ring-1 ring-slate-900/5">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{data.name}</p>
-        <p className="text-sm font-black text-indigo-600 mb-3">Total Impact: +{data.impact.toFixed(1)}% Profit</p>
-        <div className="space-y-2">
+      <div className="bg-white p-5 border border-slate-100 shadow-2xl rounded-xl w-72 sm:w-80 ring-1 ring-slate-900/10 pointer-events-none z-[100]">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 whitespace-normal leading-tight">
+          {data.name}
+        </p>
+        <p className="text-sm font-black text-indigo-600 mb-3 whitespace-nowrap">
+          Total Impact: +{data.impact.toFixed(1)}% Profit
+        </p>
+        <div className="space-y-2 border-t border-slate-50 pt-3">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Key Actions:</p>
-          <ul className="space-y-1.5">
+          <ul className="space-y-2">
             {data.actions.map((action: string, i: number) => (
-              <li key={i} className="text-[11px] text-slate-600 leading-tight flex gap-2">
-                <span className="text-indigo-400 font-bold">•</span>
-                {action}
+              <li key={i} className="text-[11px] text-slate-600 leading-snug flex gap-2">
+                <span className="text-indigo-400 font-bold shrink-0">•</span>
+                <span className="whitespace-normal">{action}</span>
               </li>
             ))}
           </ul>
@@ -80,11 +91,16 @@ export const CategoryImpactChart: React.FC<{ recommendations: Recommendation[] }
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ left: -20, right: 20 }}>
+        <BarChart data={data} layout="vertical" margin={{ left: -20, right: 30 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
           <XAxis type="number" hide />
           <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={10} width={120} tick={{ fontSize: 9 }} />
-          <Tooltip content={<CustomImpactTooltip />} cursor={{ fill: 'rgba(79, 70, 229, 0.05)' }} />
+          <Tooltip 
+            content={<CustomImpactTooltip />} 
+            cursor={{ fill: 'rgba(79, 70, 229, 0.05)' }}
+            allowEscapeViewBox={{ x: true, y: true }}
+            wrapperStyle={{ zIndex: 1000 }}
+          />
           <Bar dataKey="impact" radius={[0, 4, 4, 0]} barSize={32}>
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

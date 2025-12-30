@@ -1,12 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
   Send, 
-  Bot, 
   User, 
   Loader2, 
-  TrendingUp, 
   Globe, 
   ShieldCheck,
   Zap,
@@ -15,6 +12,7 @@ import {
 import { GoogleGenAI } from "@google/genai";
 import { marked } from "marked";
 import { exportChatToPDF } from '../services/pdfService';
+import { BotIcon } from '../App';
 
 interface Message {
   role: 'user' | 'bot';
@@ -45,6 +43,15 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
     }
   }, [messages, isTyping]);
 
+  const detectIntentRequiresSearch = (query: string): boolean => {
+    const searchKeywords = [
+      'market', 'competitor', 'news', 'trend', 'rate', 'price', 'weekend', 'local', 
+      'festival', 'event', 'nearby', 'outside', 'industry', 'benchmark', 'weather'
+    ];
+    const lowercaseQuery = query.toLowerCase();
+    return searchKeywords.some(keyword => lowercaseQuery.includes(keyword));
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
 
@@ -54,32 +61,40 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+      const needsSearch = detectIntentRequiresSearch(userMessage);
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      
+      const config: any = {
+        systemInstruction: `
+          IDENTITY: You are a World-class Hospitality Business Strategist and Revenue Engine.
+          
+          GROUNDING RULES:
+          1. INTERNAL DATA QUERY (EXCLUSIVELY SALES DATA): If the user's intent is to query their existing uploaded sales data (e.g., "What was the occupancy on X date?", "How many rooms were available?", "Show me the headers in my file"), strictly focus your answer on the provided HOTEL CONTEXT:
+             ${hotelContext}
+             Use the 'Parsed File Headers' to identify which internal fields map to their request (e.g., 'Inventory' means total available, 'Occupied' means booked).
+          
+          2. STRATEGIC / FUTURE / MARKET ANALYSIS: If the user asks for analysis, future strategy, or competitive benchmarking:
+             a. Primary Grounding: Use the INTERNAL DATA provided above as the baseline.
+             b. Secondary Grounding: Use Google Search to find REAL-TIME market trends, competitive pricing in the city, consumer demand patterns, and expected new hospitality services.
+             c. Integration: Synthesize both internal and external data to provide a comprehensive yield-focused recommendation.
+          
+          3. STYLE: Data-driven, professional, and authoritative. Use Markdown tables for performance breakdowns.
+        `
+      };
+
+      if (needsSearch) {
+        config.tools = [{ googleSearch: {} }];
+      }
+
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
         contents: [
           {
             role: 'user',
-            parts: [{ text: `
-              CONTEXT: You are a World-class Hospitality Business Strategist and Revenue Engine.
-              HOTEL DATA: ${hotelContext}
-              USER QUERY: ${userMessage}
-              
-              INSTRUCTIONS: 
-              1. **Search Mandate**: For any query involving competitor pricing, local events, market trends, or current news, you MUST use the googleSearch tool to retrieve real-time data.
-              2. **Real-Time Integration**: If you find specific market data (e.g., a local festival dates or competitor ADR), integrate those figures directly into your "What-If" calculations for the user's specific property.
-              3. **Format Requirements**: Always provide a highly structured response using Markdown. 
-              4. **Tables**: Use Markdown tables for P&L transformations, competitive benchmarks, or multi-scenario projections.
-              5. **Analysis Focus**: Focus on ROI, Yield Management, and Flow-through (Profit Margin). 
-              6. **Sections**: Use clear headers (###) like "Market Reality (Real-Time Data)", "Strategic Projection", and "Tactical Roadmap".
-              7. **Conciseness**: Use bullet points. Be data-heavy and professionally direct.
-              8. **Citations**: If you found data via search, acknowledge it and reference the findings clearly.
-            ` }]
+            parts: [{ text: userMessage }]
           }
         ],
-        config: {
-          tools: [{ googleSearch: {} }]
-        }
+        config
       });
 
       const botText = response.text || "I'm sorry, I couldn't analyze that specific scenario. Could you rephrase your query?";
@@ -123,14 +138,14 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
       <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col transform transition-transform animate-in slide-in-from-right">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-600 to-violet-700 text-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
-              <Bot className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md relative">
+              <BotIcon className="w-10 h-10 text-white" />
             </div>
             <div>
-              <h2 className="font-bold text-lg">AI Business Strategist</h2>
-              <p className="text-xs text-indigo-100 flex items-center gap-1">
+              <h2 className="font-bold text-lg leading-tight">AI Business Strategist</h2>
+              <p className="text-[10px] text-indigo-100 flex items-center gap-1 uppercase font-black tracking-widest mt-0.5">
                 <ShieldCheck className="w-3 h-3" />
-                Live Market Analysis Active
+                Grounding Active
               </p>
             </div>
           </div>
@@ -141,7 +156,7 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
               className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center gap-2 text-xs font-semibold"
             >
               <Download className="w-5 h-5" />
-              <span className="hidden sm:inline">Save</span>
+              <span className="hidden sm:inline">Save Chat (PDF)</span>
             </button>
             <button 
               onClick={onClose}
@@ -162,10 +177,12 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
               className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`flex gap-3 max-w-[95%] ${m.role === 'user' ? 'flex-row-reverse ml-auto' : 'flex-row'}`}>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                  m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-indigo-600'
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 relative ${
+                  m.role === 'user' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white border border-slate-200 text-indigo-900 shadow-sm'
                 }`}>
-                  {m.role === 'user' ? <User className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
+                  {m.role === 'user' ? <User className="w-5 h-5" /> : (
+                    <BotIcon className="w-8 h-8 text-indigo-900" />
+                  )}
                 </div>
                 <div className="space-y-2 flex-1">
                   <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm prose-chat overflow-hidden ${
@@ -201,11 +218,11 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
           {isTyping && (
             <div className="flex justify-start">
               <div className="flex gap-3 max-w-[85%]">
-                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-indigo-600 flex items-center justify-center shrink-0">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
                 </div>
-                <div className="p-4 rounded-2xl bg-white border border-slate-100 text-sm italic text-slate-400 animate-pulse">
-                  Accessing live market indices and transaction data...
+                <div className="p-4 rounded-2xl bg-white border border-slate-100 text-sm italic text-slate-400 animate-pulse font-medium">
+                  Synthesizing strategy...
                 </div>
               </div>
             </div>
@@ -214,48 +231,44 @@ export const AnalyticalBot: React.FC<AnalyticalBotProps> = ({ isOpen, onClose, h
 
         <div className="px-6 py-2 border-t border-slate-100 bg-white flex gap-2 overflow-x-auto no-scrollbar">
            <button 
-            onClick={() => setInput("Simulate 20% budget shift to Meta-search during local music festival")}
-            className="whitespace-nowrap px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all"
-           >
-            Festival impact analysis
-           </button>
-           <button 
             onClick={() => setInput("What are the current average weekend rates for 4-star hotels in this area?")}
-            className="whitespace-nowrap px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all"
+            className="whitespace-nowrap px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-tight hover:border-indigo-400 hover:text-indigo-600 transition-all bg-slate-50"
            >
             Rate benchmark
            </button>
            <button 
             onClick={() => setInput("Identify top 3 local events next month affecting hotel demand")}
-            className="whitespace-nowrap px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all"
+            className="whitespace-nowrap px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-tight hover:border-indigo-400 hover:text-indigo-600 transition-all bg-slate-50"
            >
-            Demand forecasting
+            Demand forecast
+           </button>
+           <button 
+            onClick={() => setInput("Explain the profit flow-through logic for my current direct booking mix")}
+            className="whitespace-nowrap px-3 py-1.5 rounded-full border border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-tight hover:border-indigo-400 hover:text-indigo-600 transition-all bg-slate-50"
+           >
+            Internal analysis
            </button>
         </div>
 
         <div className="p-6 bg-white border-t border-slate-100">
-          <div className="relative">
+          <div className="space-y-4">
             <input 
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Query live market data or property strategy..."
-              className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
+              placeholder="Query strategist engine..."
+              className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm font-medium"
             />
-            <button 
-              onClick={handleSend}
-              disabled={isTyping || !input.trim()}
-              className="absolute right-2 top-2 bottom-2 px-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50 hover:bg-indigo-700 transition-all"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="mt-3 flex items-center justify-center gap-4 text-[10px] text-slate-400 font-medium">
-            <span className="flex items-center gap-1 uppercase tracking-wider">
-              <Zap className="w-3 h-3 text-amber-400" />
-              Real-Time Search Grounding Enabled
-            </span>
+            <div className="flex justify-end">
+              <button 
+                onClick={handleSend}
+                disabled={isTyping || !input.trim()}
+                className="p-3 bg-indigo-600 text-white rounded-xl disabled:opacity-50 hover:bg-indigo-700 transition-all shadow-lg flex items-center justify-center"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

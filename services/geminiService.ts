@@ -1,35 +1,44 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Recommendation, StrategicPlan } from "../types";
-
-const API_KEY = process.env.API_KEY || "";
 
 export const generateStrategicPlan = async (
   targetIncrease: number,
   timelineMonths: number,
-  currentStats: string
+  currentStats: string,
+  location: string
 ): Promise<StrategicPlan> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const prompt = `
     As a world-class hospitality consultant and AI revenue engine, analyze the following hotel data and generate a strategic profitability plan.
-    Target: Increase profitability by ${targetIncrease}% within ${timelineMonths} months.
-    Current Context: ${currentStats}
+    
+    HOTEL DATA: ${currentStats}
+    LOCATION: ${location}
+    TARGET: Increase profitability by ${targetIncrease}% within ${timelineMonths} months.
 
-    Generate a structured plan with:
-    1. Recommendations in categories: Revenue Optimization, Operational Efficiency, Guest Experience, Investment, Data-Driven Decisions.
-    2. A month-by-month profit projection array for ${timelineMonths} months.
-    3. Pure data-driven Consumer Usage/Demand Insights: List 5-6 hotel services/categories (e.g. F&B, Spa, Business Center, External Laundry, Local Tours).
-       - For each, provide a usageScore (0-100).
-       - Tag as either 'Hospitality' or 'Non-Hospitality'.
+    INSTRUCTIONS:
+    1. MARKET INTELLIGENCE: Perform a real-time search for hospitality market trends, competitor pricing, and demand patterns in ${location}.
+    2. RECOMMENDATIONS: Provide comprehensive, multi-step strategic execution roadmaps for each recommendation. The 'action' field MUST be a detailed roadmap (not just a short title). For instance, specify technology stack requirements, operational shift changes, and pricing logic for high-impact concepts like 'Attribute-Based Selling (ABS)' or 'Hyper-Personalized Butler Services'.
+    3. PROJECTION: Generate a month-by-month profit margin projection array for ${timelineMonths} months.
+    4. SERVICE LINKINGS / CONSUMER INSIGHTS:
+       - Analyze the provided 'Hospitality Add-on Usage/Rating' and 'Non-Hospitality Add-on Usage/Rating' from the uploaded data.
+       - Map high ratings/usage to specific services: High Hosp Rating -> 'Luxury Spa' or 'Fine Dining'. High Non-Hosp Rating -> 'Exclusive City Tours' or 'Business Connectivity'.
+       - List 5-6 hotel services with usageScore (0-100) derived from the data trends and type ('Hospitality' or 'Non-Hospitality').
+    5. RECOMMENDED INVESTMENT: 
+       - Calculate a minimum recommended investment amount specifically for Marketing growth.
+    6. OPERATIONAL COST PROJECTION (FOR OPS MANAGER):
+       - Project monthly operational costs for the next 3 months based on market overhead and internal performance.
+       - Identify which high-performing services (from consumer usage data) can have operational/maintenance costs reduced (specify % reduction).
+       - Calculate the specific impact of these reductions on overall revenue and profit.
 
-    Format each recommendation with: Action, Goal, Example, Impact, Priority.
+    Format the final output as a JSON object strictly following the schema.
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-3-pro-preview",
     contents: prompt,
     config: {
+      tools: [{ googleSearch: {} }],
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -65,12 +74,46 @@ export const generateStrategicPlan = async (
               },
               required: ["category", "usageScore", "type"]
             }
+          },
+          recommendedInvestment: {
+            type: Type.OBJECT,
+            properties: {
+              amount: { type: Type.STRING },
+              period: { type: Type.STRING },
+              rationale: { type: Type.STRING }
+            },
+            required: ["amount", "period", "rationale"]
+          },
+          operationalCostProjections: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                month: { type: Type.STRING },
+                cost: { type: Type.STRING },
+                savingsOpportunity: { type: Type.STRING },
+                impactOnProfit: { type: Type.STRING }
+              },
+              required: ["month", "cost", "savingsOpportunity", "impactOnProfit"]
+            }
           }
         },
-        required: ["summary", "recommendations", "projectedProfitability", "consumerInsights"]
+        required: ["summary", "recommendations", "projectedProfitability", "consumerInsights", "recommendedInvestment", "operationalCostProjections"]
       }
     }
   });
 
-  return JSON.parse(response.text);
+  const planData: StrategicPlan = JSON.parse(response.text || "{}");
+  
+  const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+    ?.map((chunk: any) => ({
+      title: chunk.web?.title || 'Market Source',
+      uri: chunk.web?.uri || '#'
+    }))
+    ?.filter((src: any) => src.uri !== '#');
+
+  return {
+    ...planData,
+    sources: sources && sources.length > 0 ? sources : undefined
+  };
 };
