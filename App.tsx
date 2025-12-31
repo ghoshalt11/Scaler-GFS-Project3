@@ -160,15 +160,8 @@ const App: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // CRITICAL: Initialize fresh every time to ensure "at very begining there shouyld not be any file uplaoded"
   const [performanceData, setPerformanceData] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return { ...JSON.parse(saved), isDefault: false };
-      } catch (e) {
-        console.error("Failed to parse saved performance data", e);
-      }
-    }
     return {
       profitMargin: 0,
       transactions: 0,
@@ -222,9 +215,8 @@ const App: React.FC = () => {
     }
   }, [xValue, yValue, currentStats, location, performanceData.isDefault]);
 
-  useEffect(() => {
-    fetchPlan();
-  }, [fetchPlan]);
+  // CRITICAL: Removed auto-trigger useEffect to prevent analysis on startup or URL paste.
+  // Plan generation now ONLY occurs when the user clicks the "Calculate Strategy" button.
 
   const extractFromUnstructured = async (text: string): Promise<any> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -266,16 +258,16 @@ const App: React.FC = () => {
     const headers = lines[0].map(h => h.toLowerCase());
     const dataRows = lines.slice(1).filter(row => row.length >= headers.length && row.some(cell => cell !== ''));
 
-    const revIdx = headers.findIndex(h => h.includes('revenue'));
-    const occIdx = headers.findIndex(h => h.includes('occupied'));
-    const invIdx = headers.findIndex(h => h.includes('inventory'));
-    const costIdx = headers.findIndex(h => h.includes('cost'));
+    const revIdx = headers.findIndex(h => h.includes('total_revenue') || h.includes('revenue'));
+    const occIdx = headers.findIndex(h => h.includes('rooms_occupied') || h.includes('occupied'));
+    const invIdx = headers.findIndex(h => h.includes('total_inventory') || h.includes('inventory'));
+    const costIdx = headers.findIndex(h => h.includes('cost_allocation') || h.includes('cost'));
     const channelIdx = headers.findIndex(h => h.includes('channel'));
-    const ratingIdx = headers.findIndex(h => h.includes('service_rating'));
-    const hospUsageIdx = headers.findIndex(h => h.includes('hosp_addon_pct'));
-    const nonHospUsageIdx = headers.findIndex(h => h.includes('non_hosp_addon_pct'));
-    const hospRatingIdx = headers.findIndex(h => h.includes('hosp_addon_rating'));
-    const nonHospRatingIdx = headers.findIndex(h => h.includes('non_hosp_addon_rating'));
+    const ratingIdx = headers.findIndex(h => h.includes('average_service_rating') || h.includes('service_rating'));
+    const hospUsageIdx = headers.findIndex(h => h.includes('avg_hosp_addon_pct') || h.includes('hosp_addon_pct'));
+    const nonHospUsageIdx = headers.findIndex(h => h.includes('avg_non_hosp_addon_pct') || h.includes('non_hosp_addon_pct'));
+    const hospRatingIdx = headers.findIndex(h => h.includes('avg_hosp_addon_rating') || h.includes('hosp_addon_rating'));
+    const nonHospRatingIdx = headers.findIndex(h => h.includes('avg_non_hosp_addon_rating') || h.includes('non_hosp_addon_rating'));
 
     let totalRev = 0, totalOcc = 0, totalInv = 0, totalCost = 0, directCount = 0;
     let totalSvcRating = 0, totalHospUsage = 0, totalNonHospUsage = 0, totalHospRating = 0, totalNonHospRating = 0;
@@ -321,7 +313,7 @@ const App: React.FC = () => {
     };
 
     setPerformanceData(newData);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+    // Explicitly do not persist to localStorage to maintain a clean start on every refresh/URL paste
     setIsUploadModalOpen(false);
     setLoading(false);
   };
